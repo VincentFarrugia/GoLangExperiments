@@ -21,7 +21,7 @@ func main() {
 	fmt.Println(ptrToInt)
 
 	zero_this_var_value(ptrToA)
-	fmt.Println("Value of a after zero func: ", ptrToA)
+	fmt.Println("Value of a after zero func: ", *ptrToA)
 }
 
 func zero_this_var_value(x *int) {
