@@ -31,4 +31,56 @@ func main() {
 			fmt.Println(i, " - ", j)
 		}
 	}
+
+	// Switch Statement
+	// No default fallthrough
+	// Fallthrough is optional and usage of 'break' is not needed.
+	// Switch statements in Go also work with more than just integers.
+	switch "NameB" {
+	case "NameA":
+		fmt.Println("Case with NameA")
+	case "NameB":
+		fmt.Println("Case with NameB")
+		fallthrough // This will fall through to NameC but will NOT fall through to NameD after that.
+	case "NameC":
+		fmt.Println("Case with NameC")
+	case "NameD":
+		fmt.Println("Case with NameD")
+	default:
+		fmt.Println("Default case")
+	}
+
+	// Switch with multiple cases:
+	switch "NameB" {
+	case "NameA", "NameB":
+		fmt.Println("Case with NameA or NameB")
+	case "NameC", "NameD":
+		fmt.Println("Case with NameC or NameD")
+	default:
+		fmt.Println("Default case")
+	}
+
+	// Switch with no expression:
+	// Runs the first case which is true,
+	// If none are true, then default is run.
+	foobar := "Hello"
+	switch {
+	case len(foobar) == 2:
+		fmt.Println("Foobar length is 2")
+	case foobar == "World":
+		fmt.Println("Foobar is 'World'")
+	default:
+		fmt.Println("Default case")
+	}
+
+	// Switching on type:
+	/*x interface{}
+	switch x.(type) {
+	case int:
+		fmt.Println("int")
+	case float32:
+		fmt.Println("float32")
+	default:
+		fmt.Println("x is of 'unknown type'")
+	}*/
 }
