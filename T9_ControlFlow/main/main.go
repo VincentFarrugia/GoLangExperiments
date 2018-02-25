@@ -32,6 +32,20 @@ func main() {
 		}
 	}
 
+	// "For-each" Loop
+	numArr := [5]int{0, 1, 2, 3, 4}
+	sum := 0
+	for idx, element := range numArr {
+		sum += element
+		fmt.Println("loop array element idx:", idx)
+	}
+
+	// "For-each" Loop where we do not care about the index.
+	sum = 0
+	for _, element := range numArr {
+		sum += element
+	}
+
 	// Switch Statement
 	// No default fallthrough
 	// Fallthrough is optional and usage of 'break' is not needed.

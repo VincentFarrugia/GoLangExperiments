@@ -12,6 +12,10 @@
 
 package main
 
+import (
+	"fmt"
+)
+
 func main() {
 
 	foo(1, 2)
@@ -22,5 +26,5 @@ func main() {
 }
 
 func foo(a ...int) {
-
+	fmt.Println(a)
 }
