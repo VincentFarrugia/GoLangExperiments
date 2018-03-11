@@ -111,8 +111,53 @@ func main() {
 	testSlice[0]++
 
 	//////////////////////////////////////////////////
-	// Map
+	// Map (unordered Key-Value pairs)
 	//////////////////////////////////////////////////
+
+	// Basic map example.
+	// map[key-type]value-type
+	myMap := make(map[string]int)
+	myMap["k1"] = 10
+	myMap["k2"] = 15
+	delete(myMap, "k2")
+	fmt.Println("MyMap:", myMap)
+	k2Value, bIsK2Present := myMap["k2"]
+	fmt.Println("Was k2 present:", bIsK2Present, "k2 value:", k2Value)
+
+	// Map with initialising list.
+	// (Composite literal)
+	mapB := map[string]int{"foo": 1, "bar": 2}
+	fmt.Println("map:", mapB)
+
+	// This will break because the map is not initialised.
+	// (Remember maps are reference types and default to 'nil')
+	//var mapC map[int]float32
+	//mapC[3] = 1.23
+	//mapC[9] = 898.4
+
+	var mapD map[int]float32
+	fmt.Println("Is mapD nil?", mapD == nil)
+	fmt.Println("Length of mapD is:", len(mapD))
+
+	// Interesting point.
+	// Note that 'val' and 'bExists' in the if-else below
+	// are limited to the if-else scope.
+	mapE := make(map[string]int)
+	mapE["hello"] = 3
+	mapE["world"] = 101
+
+	// Comma-ok idiom.
+	if val, bExists := mapE["hello"]; bExists {
+		fmt.Println("mapE has entry with key 'hello'?", bExists, "Value is:", val)
+	} else {
+		fmt.Println("mapE has entry with key 'hello'?", bExists)
+	}
+
+	// Range loop over map.
+	fmt.Println("Range loop over mapE:")
+	for k, v := range mapE {
+		fmt.Println("Key:", k, "Value:", v)
+	}
 
 	//////////////////////////////////////////////////
 	// Struct
