@@ -10,6 +10,10 @@ import (
 ////////////////////
 
 // Shape A generic interface for all Shapes.
+// An interface specifies a "method set"
+// A variable of interface type can store
+// a value of any type with a method set that is
+// any superset of the interface.
 type Shape interface {
 	perimeter() float64
 	surfaceArea() float64
@@ -21,6 +25,9 @@ type Shape interface {
 ////////////////////
 
 // Square A sub-type of Shape representing a Square
+// GO interfaces are satisfied implicitly.
+// meaning that we do not need to specifically state
+// something like : Shape.
 type Square struct {
 	side float64
 }
