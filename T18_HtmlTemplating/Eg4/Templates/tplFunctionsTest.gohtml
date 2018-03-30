@@ -9,5 +9,26 @@
     {{uc ((index . 0).Fname)}}
     <h1>Edit 1</h1>
     {{rev ((index . 1).Lname)}}
+    <h1>Edit 2</h2>
+    <!-- Pipelining example-->
+    {{(index . 1).Fname | rev}}
 </body>
 </html>
+
+
+<!--
+
+Side-Note: Some Nice Global Predefined Functions Include:
+- index: Get element in current piece of data using an index position.
+    Eg. {{index .MySlice 2}}
+- end: Used to close scope.
+- range: Allows you to iterate over every element in the collection. Must be closed with a call to {{end}}
+    Eg. {{range .MySlice}} ... {{end}}
+    Eg. {{range $Key, $Element := .MySlice}} ... {{end}}
+- if: Used to detect if an item is empty. Must be closed with a call to {{end}}
+    Eg. {{ if .Name}} ... {{end}}
+- and: Boolean AND operation.
+    Eg. {{ if and .Name .LName }}
+- gt, lt, eq: Comparison operators.
+    Eg. {{ if lt .ScoreA .ScoreB }}
+-->
