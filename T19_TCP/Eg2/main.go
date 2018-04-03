@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"time"
 )
 
 func main() {
@@ -23,12 +24,14 @@ func handleClient(clientConn net.Conn) {
 	fmt.Fprintln(clientConn, "Hello client!")
 	fmt.Println("Server goroutine connected to client.")
 	fmt.Println("Server goroutine now reading client text:")
-	// TODO: Implement closing of stream.
+	defer clientConn.Close()
+
+	err := clientConn.SetDeadline(time.Now().Add(20 * time.Second))
+	panicIfErr(err)
 	scanner := bufio.NewScanner(clientConn)
 	for scanner.Scan() {
 		fmt.Println(scanner.Text())
 	}
-	clientConn.Close()
 }
 
 func panicIfErr(err error) {
