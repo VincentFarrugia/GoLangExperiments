@@ -9,33 +9,9 @@ package main
 import (
 	"fmt"
 	"net"
+
+	"github.com/VincentFarrugia/GoLangExperiments/T19_TCP/Eg4/httpUtils"
 )
-
-const (
-	//httpMethodOptions = "OPTIONS"
-	httpMethodGet = "GET"
-	/*httpMethodHead    = "HEAD"
-	httpMethodPost    = "POST"
-	httpMethodPut     = "PUT"
-	httpMethodDelete = "DELETE"
-	httpMethodTrace = "TRACE"
-	httpMethodConnect = "CONNECT"*/
-)
-
-type httpRequest struct {
-	// Request-Line
-	method      string
-	requestURI  string
-	httpVersion string
-	// Headers
-	// TODO: expand this into more detail.
-	headers map[string]string
-	// Message Body
-	body string
-}
-
-type httpResponse struct {
-}
 
 func main() {
 	fmt.Println("********************************")
@@ -62,21 +38,56 @@ func main() {
 
 func handleClient(clientConn net.Conn) {
 	defer clientConn.Close()
-	/*scanner := bufio.NewScanner(clientConn)
-	for scanner.Scan() {
-		ln := scanner.Text()
-		fmt.Println(ln)
+	request := httpUtils.ParseHTTPRequest(clientConn)
+	fmt.Println(request)
+
+	response := httpUtils.HTTPResponse{}
+	response.Constructor()
+	switch request.Method {
+	case httpUtils.CHTTPMethodGet:
+		{
+			response = getResource(request)
+		}
 	}
-	fmt.Println("End Of File")*/
+	httpUtils.SendHTTPResponse(clientConn, response)
 }
 
 //////////////////////////////////////////
-// HELPER FUNCTIONS - HTTP:
+// SERVER HTTP MUX ENDPOINT HANDLERS:
 //////////////////////////////////////////
 
-func parseHTTPRequest(rawRequestData string) httpRequest {
-	retData := httpRequest{}
-	return retData
+func getResource(request httpUtils.HTTPRequest) httpUtils.HTTPResponse {
+
+	// Default response set to server error.
+	response := httpUtils.HTTPResponse{}
+	response.ConstructorWithStatusLine("HTTP/1.1", 500, "Server Error")
+
+	contentStr := ""
+	bFoundResource := false
+
+	if request.Method == httpUtils.CHTTPMethodGet {
+		if request.RequestURI != "" {
+
+			relativeURI := ""
+			if request.RequestURI[0] == '/' {
+				relativeURI = request.RequestURI[1:]
+			}
+
+			if relativeURI == "" {
+				relativeURI = "index.html"
+			}
+
+			contentStr, bFoundResource = httpUtils.GetResourceFileContents(relativeURI)
+		}
+	}
+
+	if bFoundResource {
+		response.SetBody(contentStr)
+	} else {
+		response.SetStatusCode(404, "Could not find resource")
+	}
+
+	return response
 }
 
 //////////////////////////////////////////
