@@ -13,6 +13,8 @@ import (
 	"github.com/VincentFarrugia/GoLangExperiments/T19_TCP/Eg4/httpUtils"
 )
 
+const cWebContentRelativeRoot = "WebContent"
+
 func main() {
 	fmt.Println("********************************")
 	fmt.Println("HTTP Server Initialised.")
@@ -39,7 +41,7 @@ func main() {
 func handleClient(clientConn net.Conn) {
 	defer clientConn.Close()
 	request := httpUtils.ParseHTTPRequest(clientConn)
-	fmt.Println(request)
+	//fmt.Println(request)
 
 	response := httpUtils.HTTPResponse{}
 	response.Constructor()
@@ -68,13 +70,13 @@ func getResource(request httpUtils.HTTPRequest) httpUtils.HTTPResponse {
 	if request.Method == httpUtils.CHTTPMethodGet {
 		if request.RequestURI != "" {
 
-			relativeURI := ""
+			relativeURI := cWebContentRelativeRoot
 			if request.RequestURI[0] == '/' {
-				relativeURI = request.RequestURI[1:]
+				relativeURI += request.RequestURI[1:]
 			}
 
-			if relativeURI == "" {
-				relativeURI = "index.html"
+			if relativeURI == cWebContentRelativeRoot {
+				relativeURI += "/index.html"
 			}
 
 			contentStr, bFoundResource = httpUtils.GetResourceFileContents(relativeURI)
