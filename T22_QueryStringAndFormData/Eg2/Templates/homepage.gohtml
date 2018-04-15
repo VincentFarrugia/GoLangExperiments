@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Homepage</title>
+    </head>
+    <body>
+        <img src="/resources/HelloThere.gif">
+        <h1>"Hello there!" - Obi-wan Kenobi</h1>
+        <form action="/" method="get">
+            <input id="txtBxA" type="text" name="txtBxA.Text" value="Type something">
+            <input type="submit" value="GO!">
+        </form>
+        {{if .}}
+            Server received text '{{.}}'
+        {{end}}
+    </body>
+</html>
