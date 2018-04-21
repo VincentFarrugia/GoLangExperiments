@@ -7,6 +7,7 @@ package main
 import (
 	"html/template"
 	"net/http"
+	"time"
 )
 
 //////////////////////
@@ -39,6 +40,11 @@ func init() {
 }
 
 func main() {
+
+	// Start session cleaner goroutine.
+	go sessionCleanerRoutine()
+
+	// Start http serv mux.
 	http.HandleFunc("/", rootEndpoint)
 	http.HandleFunc("/register", registerUserEndpoint)
 	http.HandleFunc("/login", loginEndpoint)
@@ -58,6 +64,19 @@ func rootEndpoint(w http.ResponseWriter, req *http.Request) {
 
 func unknownErrorEndpoint(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, "Resource not found", http.StatusNotFound)
+}
+
+///////////////////////////
+// GOROUTINES
+///////////////////////////
+
+// TODO: We probably need to put in some
+// concurrency checks here to prevent
+// errors from main and the cleaner
+// operating on the session table at the same time.
+func sessionCleanerRoutine() {
+	sessions.CleanSessions()
+	time.Sleep(20 * time.Minute)
 }
 
 /////////////////////////

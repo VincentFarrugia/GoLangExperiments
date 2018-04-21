@@ -1,6 +1,10 @@
 package main
 
-import uuid "github.com/satori/go.uuid"
+import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 ///////////////////////////////
 // SESSION TABLE
@@ -39,6 +43,24 @@ func (st *SessionTable) AddNewBlankSessionWithUser(userID string) *Session {
 	nwSession.UserID = userID
 	st.SetEntry(nwSession.SessionID, &nwSession)
 	return st.GetSession(nwSession.SessionID)
+}
+
+// CleanSessions deletes any sessions which have remained for too long
+// depending on the session expire timespan.
+func (st *SessionTable) CleanSessions() {
+	itemsToRemove := make([]string, 0)
+	for sessionID := range st.Rows {
+		ptReqSessionData := st.GetSession(sessionID)
+		if ptReqSessionData != nil {
+			if time.Now().Sub(ptReqSessionData.LastActivity) > (cSessionExpireTimeSpan) {
+				itemsToRemove = append(itemsToRemove, sessionID)
+			}
+		}
+	}
+	for _, sessionID := range itemsToRemove {
+		st.RemoveEntry(sessionID)
+		st.SetDirty()
+	}
 }
 
 // CreateBlankEntry (IBlankTableEntryCreator interface)

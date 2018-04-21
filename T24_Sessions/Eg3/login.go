@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -89,8 +90,9 @@ func login(userID string, shadow string, w http.ResponseWriter, req *http.Reques
 			sessions.SetSession(nwSession)
 
 			ptSessionCookie := &http.Cookie{
-				Name:  cLoginCookieKeySessionID,
-				Value: nwSession.SessionID,
+				Name:   cLoginCookieKeySessionID,
+				Value:  nwSession.SessionID,
+				MaxAge: int(cSessionExpireTimeSpan / time.Second),
 			}
 			http.SetCookie(w, ptSessionCookie)
 			req.AddCookie(ptSessionCookie)

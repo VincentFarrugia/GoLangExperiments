@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -103,8 +104,9 @@ func registerUserPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 		sessions.SetSession(nwSession)
 
 		ptSessionCookie := &http.Cookie{
-			Name:  cRegisterFormValueSessionID,
-			Value: nwSession.SessionID,
+			Name:   cRegisterFormValueSessionID,
+			Value:  nwSession.SessionID,
+			MaxAge: int(cSessionExpireTimeSpan / time.Second),
 		}
 		http.SetCookie(w, ptSessionCookie)
 		req.AddCookie(ptSessionCookie)
