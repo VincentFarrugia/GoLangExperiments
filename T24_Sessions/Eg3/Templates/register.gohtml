@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Register</title>
+    </head>
+    <body>
+        Register<br>
+        So you'd like to join the group eh?<br>
+        <form action="/register", method="post">
+            Username:<br>
+            <input type="text" name="username"><br>
+            Password:<br>
+            <input type="password" name="psw"><br>
+            Retype Password:<br>
+            <input type="password" name="psw2"><br>
+            FirstName:<br>
+            <input type="text" name="firstname"><br>
+            Surname:<br>
+            <input type="text" name="surname"><br>
+            Email:<br>
+            <input type="text" name="email"><br>
+            <br>
+            <input type="submit" value="Join Now!">
+        </form>
+
+        {{if .}}
+            {{if .RegisterFailed}}
+                << REGISTER FAILED! >><br>
+                {{if not .UsernameAvailable}}
+                    - A user with the provided username already exists.<br>
+                {{end}}
+                {{if not .PasswordsMatched}}
+                    - Passwords do not match.<br>
+                {{end}}
+            {{end}}
+        {{end}}
+
+    </body>
+</html>
