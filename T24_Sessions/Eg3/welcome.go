@@ -14,6 +14,7 @@ const cWelcomeCookieSessionID = "sessionID"
 
 type welcomeTemplateInput struct {
 	Username string
+	Role     string
 }
 
 /////////////////////////////////
@@ -29,11 +30,14 @@ func welcomeEndpoint(w http.ResponseWriter, req *http.Request) {
 		if sessions.HasEntry(sessionID) {
 			reqUserID := sessions.GetSession(sessionID).UserID
 			ptReqUser := users.GetUser(reqUserID)
-			templateInput := welcomeTemplateInput{
-				Username: ptReqUser.UserID,
+			if ptReqUser != nil {
+				templateInput := welcomeTemplateInput{
+					Username: ptReqUser.UserID,
+					Role:     ptReqUser.Role,
+				}
+				tpl.ExecuteTemplate(w, "welcome.gohtml", templateInput)
+				bSuccess = true
 			}
-			tpl.ExecuteTemplate(w, "welcome.gohtml", templateInput)
-			bSuccess = true
 		}
 	}
 

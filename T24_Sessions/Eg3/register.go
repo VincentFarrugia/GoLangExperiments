@@ -18,6 +18,7 @@ const cRegisterFormValueFirstname = "firstname"
 const cRegisterFormValueSurname = "surname"
 const cRegisterFormValueEmail = "email"
 const cRegisterFormValueSessionID = "sessionID"
+const cRegisterFormValueRole = "role"
 
 /////////////////////////////////
 // REGISTER STRUCTS
@@ -30,6 +31,7 @@ type registerTemplateInput struct {
 	Firstname         string
 	Surname           string
 	Email             string
+	Role              string
 	UsernameAvailable bool
 	PasswordsMatched  bool
 	RegisterFailed    bool
@@ -63,6 +65,7 @@ func registerUserPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 	frmFirstname := req.FormValue(cRegisterFormValueFirstname)
 	frmSurname := req.FormValue(cRegisterFormValueSurname)
 	frmEmail := req.FormValue(cRegisterFormValueEmail)
+	frmRole := req.FormValue(cRegisterFormValueRole)
 	bUsernameAvailable := (users.HasEntry(frmUsername) == false)
 	bPasswordsMatched := (frmPassword == frmPassword2)
 
@@ -83,6 +86,7 @@ func registerUserPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 			Surname:   frmSurname,
 			Email:     frmEmail,
 			Shadow:    string(bs),
+			Role:      frmRole,
 		}
 		users.SetUser(nwUser)
 
@@ -119,6 +123,7 @@ func registerUserPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 			Firstname:         frmFirstname,
 			Surname:           frmSurname,
 			Email:             frmEmail,
+			Role:              frmRole,
 			UsernameAvailable: bUsernameAvailable,
 			PasswordsMatched:  bPasswordsMatched,
 			RegisterFailed:    true,
