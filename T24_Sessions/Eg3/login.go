@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -72,9 +74,10 @@ func loginPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 func login(userID string, shadow string, w http.ResponseWriter, req *http.Request) bool {
 	ptReqUser := users.GetUser(userID)
 	if ptReqUser != nil {
-		if ptReqUser.Shadow == shadow {
-			// This is a valid user.
 
+		err := bcrypt.CompareHashAndPassword([]byte(ptReqUser.Shadow), []byte(shadow))
+		if err == nil {
+			// This is a valid user.
 			sessionUUID, err := uuid.NewV4()
 			if err != nil {
 				// TODO: handle error.

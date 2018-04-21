@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 /////////////////////////////////
@@ -69,18 +70,27 @@ func registerUserPOSTEndpoint(w http.ResponseWriter, req *http.Request) {
 
 		// Valid information given.
 		// Register the new user.
+
+		bs, err := bcrypt.GenerateFromPassword([]byte(frmPassword), bcrypt.MinCost)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		nwUser := &User{
 			UserID:    frmUsername,
 			FirstName: frmFirstname,
 			Surname:   frmSurname,
 			Email:     frmEmail,
-			Shadow:    frmPassword,
+			Shadow:    string(bs),
 		}
 		users.SetUser(nwUser)
 
 		sessionUUID, err := uuid.NewV4()
 		if err != nil {
 			// TODO: handle error.
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
 		}
 		nwSession := &Session{
 			SessionID: sessionUUID.String(),
