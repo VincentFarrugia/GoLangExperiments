@@ -1,0 +1,12 @@
+[Unit]
+Description=Go Server
+
+[Service]
+ExecStart=/home/<username>/<exepath>
+WorkingDirectory=/home/<username>/<working-dir>
+User=root
+Group=root
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
