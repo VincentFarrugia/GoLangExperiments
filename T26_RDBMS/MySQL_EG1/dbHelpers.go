@@ -74,6 +74,33 @@ func (dbConn *DBConnection) Ping() error {
 	return nil
 }
 
+// RunMod runs the modification statement on the DBConnection.
+// Mod statements are anything which modify the database.
+// EG. CREATE, INSERT and DELETE.
+func (dbConn *DBConnection) RunMod(mod string) {
+	stmt, err := dbConn.RawConn.Prepare(mod)
+	printOutErr(err)
+
+	r, err := stmt.Exec()
+	printOutErr(err)
+
+	_, err = r.RowsAffected()
+	printOutErr(err)
+}
+
+// RunQuery runs a query on the DBConnection.
+// Queries do not modify the database.
+func (dbConn *DBConnection) RunQuery(query string) (*sql.Rows, error) {
+	rows, err := dbConn.RawConn.Query(query)
+	return rows, err
+}
+
+// RunExec runs exec type SQL queries on the DBConnection.
+func (dbConn *DBConnection) RunExec(query string) (sql.Result, error) {
+	result, err := dbConn.RawConn.Exec(query)
+	return result, err
+}
+
 // Invalidate makes a DBConnection unusable by closing it and resetting it.
 func (dbConn *DBConnection) Invalidate() error {
 	if IsValidDBConnection(dbConn) {
@@ -89,6 +116,11 @@ func (dbConn *DBConnection) Invalidate() error {
 // IsValidDBConnection returns true if a connection is not null.
 func IsValidDBConnection(dbConn *DBConnection) bool {
 	return ((dbConn != nil) && (dbConn.RawConn != nil))
+}
+
+// IsValidDBConnectionNoPtr similar to IsValidDBConnection but does not need a pointer.
+func IsValidDBConnectionNoPtr(dbConn DBConnection) bool {
+	return (dbConn.RawConn != nil)
 }
 
 ///////////////////////////////////////////
@@ -118,7 +150,64 @@ func (dbcc *DBConnCreator) CreateConnection(settings DBConnSettings) (DBConnecti
 		retError = err
 		return retConn, retError
 	}
+	retConn.RawConn = db
 	return retConn, retError
+}
+
+///////////////////////////////////////////
+// OTHER HELPER FUNCTIONS:
+///////////////////////////////////////////
+
+func convertRowsToString(rows *sql.Rows) (string, error) {
+	retStr := ""
+	var retError error = nil
+	if rows == nil {
+		return "", fmt.Errorf("Rows was nil")
+	}
+
+	cols, err := rows.Columns()
+	if err != nil {
+		panic(err.Error())
+	}
+	length := len(cols)
+
+	var result [][]string
+	var container []string
+	var pointers []interface{}
+	for rows.Next() {
+		pointers = make([]interface{}, length)
+		container = make([]string, length)
+		for i := range pointers {
+			pointers[i] = &container[i]
+		}
+		err = rows.Scan(pointers...)
+		if err != nil {
+			retStr = ""
+			retError = err
+			break
+		}
+		result = append(result, container)
+	}
+
+	if err != nil {
+		retStr = ""
+	}
+
+	if err == nil {
+		for idx, rowData := range result {
+			for i := 0; i < len(rowData); i++ {
+				retStr += rowData[i]
+				if i < (len(rowData) - 1) {
+					retStr += "\t"
+				}
+			}
+			if idx < (len(result) - 1) {
+				retStr += "\n"
+			}
+		}
+	}
+
+	return retStr, retError
 }
 
 ///////////////////////////////////////////
