@@ -28,3 +28,23 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "250m"
+        # ReadinessProbe:
+        # Indicates whether the Container is ready to service requrests.
+        # If the readiness probe fails, the endpoints controller removes
+        # the Pod's IP address from the endpoints of all Services that match the Pod.
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        # LivenessProbe:
+        # Indicates whether the Container is running.
+        # If the liveness probe failes, the kublet kills the Container, and
+        # the Container is subjected to its restart policy.
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
