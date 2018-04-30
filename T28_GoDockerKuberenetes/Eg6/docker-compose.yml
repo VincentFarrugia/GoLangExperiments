@@ -1,0 +1,10 @@
+version: '2'
+services:
+  microservice:
+    build: .
+    image: mybookapi:1.0.0-alpine
+    environment:
+    - PORT=8080
+    ports:
+    - "8080:8080"
+    
