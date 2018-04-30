@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+    name: mybookapi
+    labels:
+      app: mybookapi
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: mybookapi
+        tier: service
+    spec:
+      containers:
+      - name: mybookapi
+        image: "mybooapi:1.0.0-alpine"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
