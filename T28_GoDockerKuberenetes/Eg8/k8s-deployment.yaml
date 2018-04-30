@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: mybookapi
-        image: "mybooapi:1.0.0-alpine"
+        image: "mybookapi:1.0.0-alpine"
         ports:
         - containerPort: 8080
         env:
