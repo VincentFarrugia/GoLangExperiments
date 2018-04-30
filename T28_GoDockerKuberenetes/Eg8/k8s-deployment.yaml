@@ -9,6 +9,7 @@ spec:
   template:
     metadata:
       labels:
+        # This is the label for the pods.
         app: mybookapi
         tier: service
     spec:

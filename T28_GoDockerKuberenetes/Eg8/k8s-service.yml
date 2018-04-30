@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mybookapi
+  labels:
+    app: mybookapi
+    tier: service
+spec:
+  # Use NodePort to be able to access the port on each node.
+  type: NodePort
+  ports:
+  - port: 8080
+  selector:
+    # This name should match the name of your pod.
+    app: mybookapi
