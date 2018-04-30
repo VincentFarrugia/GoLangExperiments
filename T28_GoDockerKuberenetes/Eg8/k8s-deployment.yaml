@@ -6,6 +6,15 @@ metadata:
       app: mybookapi
 spec:
   replicas: 2
+  # Some info for rolling updates.
+  revisionHistoryLimit: 10
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnvailable: 1
+      maxSurge: 2
+  #############
   template:
     metadata:
       labels:
