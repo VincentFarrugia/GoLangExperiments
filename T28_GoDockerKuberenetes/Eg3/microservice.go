@@ -10,7 +10,7 @@ import (
 	bookAPI "github.com/VincentFarrugia/GoLangExperiments/T28_GoDockerKuberenetes/Eg2/api"
 )
 
-var bookDatabase map[string]bookAPI.Book = map[string]bookAPI.Book{
+var bookDatabase = map[string]bookAPI.Book{
 	"A_ISBN": bookAPI.Book{Name: "A_Name", Author: "A_Author", ISBN: "A_ISBN"},
 	"B_ISBN": bookAPI.Book{Name: "B_Name", Author: "B_Author", ISBN: "B_ISBN"},
 	"C_ISBN": bookAPI.Book{Name: "C_Name", Author: "C_Author", ISBN: "C_ISBN"},
