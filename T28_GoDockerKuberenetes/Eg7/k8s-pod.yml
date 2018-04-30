@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: mybookapi
+    labels:
+        language: go
+        env: test
+spec:
+    containers:
+      - name: mybookapi
+        image: mybookapi:1.0.0-alpine
+        ports:
+          - containerPort: 8080
+            protocol: TCP
