@@ -1,23 +1,26 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+
+	bookAPI "github.com/VincentFarrugia/GoLangExperiments/T28_GoDockerKuberenetes/Eg2/api"
 )
 
-var bookList []Book = []Book{
-	Book{
+var bookList []bookAPI.Book = []bookAPI.Book{
+	bookAPI.Book{
 		Name:   "A_Name",
 		Author: "A_Author",
 		ISBN:   "A_ISBN",
 	},
-	Book{
+	bookAPI.Book{
 		Name:   "B_Name",
 		Author: "B_Author",
 		ISBN:   "B_ISBN",
 	},
-	Book{
+	bookAPI.Book{
 		Name:   "C_Name",
 		Author: "C_Author",
 		ISBN:   "C_ISBN",
@@ -27,6 +30,7 @@ var bookList []Book = []Book{
 func main() {
 	http.HandleFunc("/", rootEndpoint)
 	http.HandleFunc("/echo", echoEndpoint)
+	http.HandleFunc("/books", apiBooksEndpoint)
 	http.ListenAndServe(port(), nil)
 }
 
@@ -47,4 +51,13 @@ func echoEndpoint(w http.ResponseWriter, req *http.Request) {
 	message := req.URL.Query()["message"][0]
 	w.Header().Add("Content-Type", "text/plain")
 	fmt.Fprintf(w, message)
+}
+
+func apiBooksEndpoint(w http.ResponseWriter, req *http.Request) {
+	b, err := json.Marshal(bookList)
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
+	w.Write(b)
 }
