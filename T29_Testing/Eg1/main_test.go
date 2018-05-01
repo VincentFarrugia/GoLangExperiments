@@ -13,6 +13,14 @@ An example of a basic GoLang UnitTest.
 - Use "go test -run ^TEST-FUNCTION-NAME$" to run a specific test function
 - Use "go test github.com/<user>/<reponame>" to run tests using a fully-qualified package name.
 - Use the -v option param to see verbose output for your tests.
+
+[Generating an HTML coverage report]
+Run these commands to visualise which parts of your program have been covered
+by the test functions and which statements were not tested.
+	"go test -cover -coverprofile=c.out"
+	"go tool cover -html=c.out -o coverage.html"
+
+
 */
 
 package main
@@ -57,7 +65,7 @@ func TestSumUsingTestTable(t *testing.T) {
 		y int
 		n int
 	}{
-		{1, 1, 1},
+		{1, 1, 2},
 		{1, 2, 3},
 		{2, 2, 4},
 		{5, 2, 7},
