@@ -6,7 +6,8 @@ An example of a basic GoLang UnitTest.
 - Should have names with the format "Test<NameOfFunctionUnderTest>"
 - Should call t.Error or t.Fail to indicate a failure. (t.Error provides more detail.)
 - Should call t.Log to provide non-failing information.
-- Must be saved in a file named with the format "<something>_test.go"
+- Must be saved in a file named with the format "<something>_test.go" for testing interfaces as if you were a ThirdParty.
+- Must be saved in a file named with the format "<something>_internal_test.go" for testing internals not to be exposed to ThirdParties.
 
 [Launching Tests]:
 - Use "go test" in the top directory to run _test files in that directory.
