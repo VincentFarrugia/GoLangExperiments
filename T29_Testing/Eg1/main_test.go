@@ -23,11 +23,12 @@ by the test functions and which statements were not tested.
 
 */
 
-package main
+package main_test
 
 import (
 	"testing"
 
+	mainAPI "github.com/VincentFarrugia/GoLangExperiments/T29_Testing/Eg1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +37,7 @@ import (
 func TestSum(t *testing.T) {
 	numA := 21
 	numB := 4
-	total := Sum(numA, numB)
+	total := mainAPI.Sum(numA, numB)
 	expectedTotal := 25
 	if total != expectedTotal {
 		t.Errorf("TestSum failed! %d + %d = %d is incorrect. Should have got result: %d.", numA, numB, total, expectedTotal)
@@ -49,7 +50,7 @@ func TestSum(t *testing.T) {
 func TestSumUsingAssertPkg(t *testing.T) {
 	numA := 21
 	numB := 4
-	total := Sum(numA, numB)
+	total := mainAPI.Sum(numA, numB)
 	assert.Equal(t, 25, total, "TestSumUsingAssertPkg assert failed!")
 }
 
@@ -72,7 +73,7 @@ func TestSumUsingTestTable(t *testing.T) {
 	}
 
 	for _, testEntry := range testTable {
-		total := Sum(testEntry.x, testEntry.y)
+		total := mainAPI.Sum(testEntry.x, testEntry.y)
 		if total != testEntry.n {
 			t.Errorf("Sum of (%d+%d) was incorrect. Got: %d. Want: %d.", testEntry.x, testEntry.y, total, testEntry.n)
 		}
