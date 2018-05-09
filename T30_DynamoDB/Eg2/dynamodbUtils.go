@@ -7,8 +7,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -19,6 +17,10 @@ const (
 	cErrorStringDBConnNil = "database connection was nil"
 )
 
+///////////////////////////////
+// DynamoDBConfigV1
+///////////////////////////////
+
 // DynamoDBConfigV1 contains simplified settings needed to establish a connection with a DynamoDB database.
 type DynamoDBConfigV1 struct {
 	acKey     string
@@ -27,6 +29,7 @@ type DynamoDBConfigV1 struct {
 	endpoint  string
 }
 
+// IsValid returns true if all config parameters are filled up correctly.
 func (c *DynamoDBConfigV1) IsValid() bool {
 
 	if c == nil {
@@ -36,10 +39,29 @@ func (c *DynamoDBConfigV1) IsValid() bool {
 	return ((c.acKey != "") && (c.scKey != "") && (c.awsRegion != "") && (c.endpoint != ""))
 }
 
+///////////////////////////////
+// DynamoDBConnection
+///////////////////////////////
+
+// DynamoDBConnection acts as a wrapper for dynamodb.DynamoDB (i.e. an active DynamoDB connection).
+type DynamoDBConnection struct {
+	AWSConn *dynamodb.DynamoDB
+}
+
+// IsValid returns true if the dbConn is valid and connected.
+func (dbConn *DynamoDBConnection) IsValid() bool {
+	if dbConn != nil {
+		if dbConn.AWSConn != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // ConnectToDatabase takes a connect config and attempts to establish a connection to a DynamoDB database.
 // OnSuccess - Returns a pointer to a connected DynamoDB client and nil as error.
 // OnFail - Returns nil and err info.
-func ConnectToDatabase(config DynamoDBConfigV1) (*dynamodb.DynamoDB, error) {
+func ConnectToDatabase(config DynamoDBConfigV1) (*DynamoDBConnection, error) {
 
 	if config.IsValid() == false {
 		return nil, fmt.Errorf("database conn config is invalid")
@@ -59,15 +81,20 @@ func ConnectToDatabase(config DynamoDBConfigV1) (*dynamodb.DynamoDB, error) {
 	if err == nil {
 		dbConn = dynamodb.New(sess)
 	}
-	return dbConn, err
+	return &DynamoDBConnection{AWSConn: dbConn}, err
+}
+
+// IsDBConnValid returns true if the passed in connection is valid and connected.
+func IsDBConnValid(dbConn *DynamoDBConnection) bool {
+	return ((dbConn != nil) && (dbConn.IsValid()))
 }
 
 // GetTableDescription gets the table description of a particular table in the connected DynamoDB database.
 // OnSuccess - Returns a pointer to a TableDescription and nil as error.
 // OnFail - Returns nil and error info.
-func GetTableDescription(dbConn *dynamodb.DynamoDB, tableName string) (*dynamodb.TableDescription, error) {
+func (dbConn *DynamoDBConnection) GetTableDescription(tableName string) (*dynamodb.TableDescription, error) {
 
-	if dbConn == nil {
+	if IsDBConnValid(dbConn) == false {
 		return nil, fmt.Errorf(cErrorStringDBConnNil)
 	}
 
@@ -75,7 +102,7 @@ func GetTableDescription(dbConn *dynamodb.DynamoDB, tableName string) (*dynamodb
 		TableName: aws.String(tableName),
 	}
 
-	result, err := dbConn.DescribeTable(request)
+	result, err := dbConn.AWSConn.DescribeTable(request)
 	var tableDesc *dynamodb.TableDescription = nil
 	if err == nil {
 		tableDesc = result.Table
@@ -84,34 +111,29 @@ func GetTableDescription(dbConn *dynamodb.DynamoDB, tableName string) (*dynamodb
 }
 
 // GetAllRowsFromTable gets all data for all rows found within a DynamoDB database table.
-func GetAllRowsFromTable(dbConn *dynamodb.DynamoDB, tableName string, retItems *[]interface{}) error {
+func (dbConn *DynamoDBConnection) GetAllRowsFromTable(tableName string) (*dynamodb.ScanOutput, error) {
 
-	if dbConn == nil {
-		return fmt.Errorf(cErrorStringDBConnNil)
+	if IsDBConnValid(dbConn) == false {
+		return nil, fmt.Errorf(cErrorStringDBConnNil)
 	}
 
 	params := &dynamodb.ScanInput{
 		TableName: aws.String(tableName),
 	}
 
-	result, err := dbConn.Scan(params)
+	result, err := dbConn.AWSConn.Scan(params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, retItems)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return result, nil
 }
 
 // GetTableRowByPartitionKey searches for a DB table item with the provided pk, in the table with the provided name.
-func GetTableRowByPartitionKey(dbConn *dynamodb.DynamoDB, tableName string, pkColumnName, pkValue string, retItem *[]interface{}) error {
+func (dbConn *DynamoDBConnection) GetTableRowByPartitionKey(tableName string, pkColumnName, pkValue string) (*dynamodb.QueryOutput, error) {
 
-	if dbConn == nil {
-		return fmt.Errorf(cErrorStringDBConnNil)
+	if IsDBConnValid(dbConn) == false {
+		return nil, fmt.Errorf(cErrorStringDBConnNil)
 	}
 
 	queryInput := &dynamodb.QueryInput{
@@ -128,31 +150,32 @@ func GetTableRowByPartitionKey(dbConn *dynamodb.DynamoDB, tableName string, pkCo
 		},
 	}
 
-	resp, err := dbConn.Query(queryInput)
+	resp, err := dbConn.AWSConn.Query(queryInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = dynamodbattribute.UnmarshalListOfMaps(resp.Items, retItem)
-	return err
+	return resp, err
 }
 
 // GetTableRowByGSI searches for a DB table item with the provided Global Secondary Index (GSI).
 // The version of the function automatically sets maxRowsReturned to 1.
-func GetTableRowByGSI(dbConn *dynamodb.DynamoDB, tableName string,
-	gsiName string, gsiValue string, columnName string,
-	retItem *[]interface{}) error {
-	return GetTableRowsByGSI(dbConn, tableName, gsiName, gsiValue, columnName, 1, retItem)
+func (dbConn *DynamoDBConnection) GetTableRowByGSI(tableName string,
+	gsiName string, gsiValue string, columnName string) (*dynamodb.QueryOutput, error) {
+
+	if IsDBConnValid(dbConn) == false {
+		return nil, fmt.Errorf(cErrorStringDBConnNil)
+	}
+	return dbConn.GetTableRowsByGSI(tableName, gsiName, gsiValue, columnName, 1)
 }
 
 // GetTableRowsByGSI searches for a DB table item with the provided Global Secondary Index (GSI).
 // maxRowsReturned can be specified to set a limit on the number of rows returned.
-func GetTableRowsByGSI(dbConn *dynamodb.DynamoDB, tableName string,
-	gsiName string, gsiValue string, columnName string, maxRowsReturned int,
-	retItems *[]interface{}) error {
+func (dbConn *DynamoDBConnection) GetTableRowsByGSI(tableName string,
+	gsiName string, gsiValue string, columnName string, maxRowsReturned int) (*dynamodb.QueryOutput, error) {
 
-	if dbConn == nil {
-		return fmt.Errorf(cErrorStringDBConnNil)
+	if IsDBConnValid(dbConn) == false {
+		return nil, fmt.Errorf(cErrorStringDBConnNil)
 	}
 
 	queryInput := &dynamodb.QueryInput{
@@ -171,29 +194,27 @@ func GetTableRowsByGSI(dbConn *dynamodb.DynamoDB, tableName string,
 		},
 	}
 
-	resp, err := dbConn.Query(queryInput)
+	resp, err := dbConn.AWSConn.Query(queryInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = dynamodbattribute.UnmarshalListOfMaps(resp.Items, retItems)
-	return err
+	return resp, nil
 }
 
 // RunQueryOnTable executes a query on a DynamoDB Table and fills up the result structure with any returned rows.
-func RunQueryOnTable(dbConn *dynamodb.DynamoDB, tableName, query *dynamodb.QueryInput, retItems *[]interface{}) error {
+func (dbConn *DynamoDBConnection) RunQueryOnTable(tableName, query *dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
 
-	if dbConn == nil {
-		return fmt.Errorf(cErrorStringDBConnNil)
+	if IsDBConnValid(dbConn) == false {
+		return nil, fmt.Errorf(cErrorStringDBConnNil)
 	}
 
-	resp, err := dbConn.Query(query)
+	resp, err := dbConn.AWSConn.Query(query)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = dynamodbattribute.UnmarshalListOfMaps(resp.Items, retItems)
-	return err
+	return resp, nil
 }
 
 ////////////////////////////////////////////////////

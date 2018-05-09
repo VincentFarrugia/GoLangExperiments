@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
-	"reflect"
+
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 // Person represents a row in the Person table.
 type Person struct {
 	PersonID  string
 	FirstName string
-	LastName  string
+	Surname   string
 }
 
 func main() {
@@ -22,33 +24,29 @@ func main() {
 	}
 
 	if connConfig.IsValid() == false {
-		fmt.Println("Database Conn Config was Invalid. Exiting...")
+		fmt.Println("ERROR: Database Conn Config was Invalid.")
+		fmt.Println("Program Terminated.")
 		return
 	}
 
-	dbConn, err := ConnectToDatabase(connConfig)
-	panicIfErr(err)
+	var err error
+	var dbConn *DynamoDBConnection
 
-	obj := []Person{}
-	retSlice, bOk := takeSliceArg(obj)
-	if bOk == false {
-		fmt.Println("slice conversion not ok")
-	} else {
+	dbConn, err = ConnectToDatabase(connConfig)
+	if shouldContinue(err) {
 		tableName := ""
-		err = GetTableRowByPartitionKey(dbConn, tableName, "PersonID", "P1", &retSlice)
-		panicIfErr(err)
-
-		if err == nil {
-
-			obj = make([]Person, len(retSlice))
-			for i, x := range retSlice {
-				obj[i] = x.(Person)
+		queryOutput, err := dbConn.GetTableRowByPartitionKey(tableName, "PersonID", "P2")
+		if shouldContinue(err) {
+			personList := []Person{}
+			err = extractPersonList(queryOutput, &personList)
+			if shouldContinue(err) {
+				fmt.Println("Found this output:")
+				fmt.Println(personList)
 			}
-
-			fmt.Println("Returned this data:")
-			fmt.Println(obj)
 		}
 	}
+
+	fmt.Println("Program Terminated.")
 }
 
 ///////////////////////////////////////
@@ -61,26 +59,27 @@ func panicIfErr(err error) {
 	}
 }
 
-func takeSliceArg(arg interface{}) (out []interface{}, ok bool) {
-	slice, success := takeArg(arg, reflect.Slice)
-	if !success {
-		ok = false
-		return
+func shouldContinue(err error) bool {
+	if err != nil {
+		fmt.Println("ERROR: " + err.Error())
+		return false
 	}
-	c := slice.Len()
-	out = make([]interface{}, c)
-	for i := 0; i < c; i++ {
-		out[i] = slice.Index(i).Interface()
-	}
-	return out, true
+	return true
 }
 
-func takeArg(arg interface{}, kind reflect.Kind) (val reflect.Value, ok bool) {
-	val = reflect.ValueOf(arg)
-	if val.Kind() == kind {
-		ok = true
+// TODO: Find a more generic way of doing this.
+func extractPersonList(queryOutput *dynamodb.QueryOutput, retList *[]Person) error {
+
+	if queryOutput == nil || retList == nil {
+		return fmt.Errorf("extract-person-list failed")
 	}
-	return
+
+	err := dynamodbattribute.UnmarshalListOfMaps(queryOutput.Items, retList)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 ///////////////////////////////////////
