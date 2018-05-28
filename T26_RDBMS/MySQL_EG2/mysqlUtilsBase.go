@@ -54,13 +54,14 @@ func (dbcs *DBConnSettings) IsValid() bool {
 // DBConnection
 ///////////////////////////////////////////
 
+// DBConnection acts as a wrapper around a raw database connection.
 type DBConnection struct {
 	RawConn *sql.DB
 }
 
 // Close is a helper function for closing a connection to a DB.
 func (dbConn *DBConnection) Close() error {
-	var err error = nil
+	var err error
 	if IsValidDBConnection(dbConn) {
 		err = dbConn.RawConn.Close()
 		dbConn.RawConn = nil
@@ -142,7 +143,7 @@ type DBConnCreator struct {
 func (dbcc *DBConnCreator) CreateConnection(settings DBConnSettings) (DBConnection, error) {
 
 	retConn := DBConnection{RawConn: nil}
-	var retError error = nil
+	var retError error
 
 	db, err := sql.Open(settings.DriverName, settings.GetDataSourceName())
 	if err != nil {
@@ -166,7 +167,7 @@ func (dbcc *DBConnCreator) CreateConnection(settings DBConnSettings) (DBConnecti
 
 func convertRowsToString(rows *sql.Rows) (string, error) {
 	retStr := ""
-	var retError error = nil
+	var retError error
 	if rows == nil {
 		return "", fmt.Errorf("Rows was nil")
 	}
@@ -214,6 +215,41 @@ func convertRowsToString(rows *sql.Rows) (string, error) {
 	}
 
 	return retStr, retError
+}
+
+// ConvertISO8601ToMySQLDatetime is a helper function to convert
+// an ISO8601 DateTime format: Eg. "2018-05-15T09:52:21Z"
+// into a MySQL Datetime type: Eg. "2018-05-15 09:52:21"
+func ConvertISO8601ToMySQLDatetime(isoStr string) string {
+	retStr := isoStr[0:10]
+	retStr += " "
+	retStr += isoStr[11:19]
+	return retStr
+}
+
+// ConvertMySQLDatetimeToISO8601 is a helper function to convert
+// a MySQL Datetime type: Eg. "2018-05-15 09:52:21"
+// into an ISO8601 DateTime format: Eg. "2018-05-15T09:52:21Z"
+func ConvertMySQLDatetimeToISO8601(mySQLDateTimeStr string) string {
+	retStr := mySQLDateTimeStr[0:10]
+	retStr += "T"
+	retStr += mySQLDateTimeStr[11:]
+	retStr += "Z"
+	return retStr
+}
+
+// ExtractDateStringFromMySQLDatetime is a helper function to get
+// the date portion of a MySQL Datetime type:
+// Eg. FROM "2018-05-15 09:52:21" TO "2018-05-15"
+func ExtractDateStringFromMySQLDatetime(mySQLDateTimeStr string) string {
+	return mySQLDateTimeStr[0:10]
+}
+
+// ExtractDateStringFromISO8601 is a helper function to get
+// the date portion of an ISO8601 datetime:
+// EG. FROM "2018-05-15T09:52:21Z" TO "2018-05-15"
+func ExtractDateStringFromISO8601(isoStr string) string {
+	return isoStr[0:10]
 }
 
 ///////////////////////////////////////////

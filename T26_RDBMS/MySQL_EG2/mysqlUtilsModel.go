@@ -9,6 +9,7 @@ import (
 // SQLTableEntry represents a base type for sql tables.
 type SQLTableEntry interface {
 	GetTableName() string
+	GetOwnerDatabaseName() string
 	GetColumnHeaders() []string
 	GetValues() []interface{}
 }
@@ -32,23 +33,26 @@ func ClearObjectData(t SQLTableEntry) {
 }
 
 // CreateSQLColumnsString generates a comma separated columns string.
-func CreateSQLColumnsString(t SQLTableEntry, bAddTableName bool, bEncloseInBrackets bool) string {
+func CreateSQLColumnsString(t SQLTableEntry, bAddTableName bool, bAddDatabaseName, bEncloseInBrackets bool) string {
 	var buffer bytes.Buffer
 	columnHeaders := t.GetColumnHeaders()
 	numColumnHeaders := len(columnHeaders)
 	tableName := t.GetTableName()
+	dbName := t.GetOwnerDatabaseName()
 	if bEncloseInBrackets {
 		buffer.WriteString("(")
 	}
 	for idx, item := range columnHeaders {
 
-		if bAddTableName {
+		if bAddDatabaseName && bAddTableName {
+			buffer.WriteString(fmt.Sprintf("%s.%s.%s", dbName, tableName, item))
+		} else if bAddTableName {
 			buffer.WriteString(fmt.Sprintf("%s.%s", tableName, item))
 		} else {
 			buffer.WriteString(item)
 		}
 
-		if idx < numColumnHeaders {
+		if idx < (numColumnHeaders - 1) {
 			buffer.WriteString(",")
 		}
 	}
@@ -66,7 +70,7 @@ func CreateSQLValuesString(t SQLTableEntry) string {
 	numValues := len(sqlValuesArr)
 	for idx, item := range sqlValuesArr {
 		buffer.WriteString(item)
-		if idx < numValues {
+		if idx < (numValues - 1) {
 			buffer.WriteRune(',')
 		}
 	}
@@ -93,7 +97,7 @@ func CreateCombinedColumnValueSQLString(t SQLTableEntry, bAddTableName bool) str
 		buffer.WriteString("=")
 		buffer.WriteString(sqlValues[idx])
 
-		if idx < numColumnHeaders {
+		if idx < (numColumnHeaders - 1) {
 			buffer.WriteString(",")
 		}
 	}
@@ -126,6 +130,11 @@ func ConvertValuesToStringArr(t SQLTableEntry) []string {
 
 // UpdateTableRow updates a row in the related table.
 func UpdateTableRow(dbConn *DBConnection, rowData SQLTableEntry) error {
+	return UpdateTableRowV2(dbConn, rowData, "")
+}
+
+// UpdateTableRowV2 updates a row in the related table. This variant includes a custom "onDuplicateUpdateStr" string.
+func UpdateTableRowV2(dbConn *DBConnection, rowData SQLTableEntry, onDuplicateUpdateStr string) error {
 
 	if dbConn == nil {
 		return fmt.Errorf("DBConn was nil")
@@ -135,18 +144,58 @@ func UpdateTableRow(dbConn *DBConnection, rowData SQLTableEntry) error {
 		return fmt.Errorf("RowData was nil")
 	}
 
+	dupUpdateStr := onDuplicateUpdateStr
+	if onDuplicateUpdateStr == "" {
+		dupUpdateStr = CreateCombinedColumnValueSQLString(rowData, false)
+	}
+
 	sqlQueryStr := fmt.Sprintf(`
 	INSERT INTO %s %s
 	VALUES %s
-	ON DUPLICATE KEY UPDATE
+	ON DUPLICATE KEY UPDATE 
 	%s;`,
-		cProfileTableName,
-		CreateSQLColumnsString(rowData, false, true),
+		rowData.GetTableName(),
+		CreateSQLColumnsString(rowData, false, false, true),
 		CreateSQLValuesString(rowData),
-		CreateCombinedColumnValueSQLString(rowData, false))
+		dupUpdateStr)
+	//fmt.Println()
 	//fmt.Printf("SQL QUERY IS: '%s'\n", sqlQueryStr)
+	//fmt.Println()
 	err := dbConn.RunMod(sqlQueryStr)
 	return err
+}
+
+// DoesRowExistWithStringPK returns true if the row with the provided PK exists in the specificed Database.Table.
+func DoesRowExistWithStringPK(dbConn *DBConnection, databaseName string, tableName string, pkName string, pkValue string) (bool, error) {
+
+	if dbConn == nil {
+		return true, fmt.Errorf("DBConn was nil")
+	}
+
+	dbTableCombo := databaseName + "." + tableName
+
+	sqlQueryStr := fmt.Sprintf(`
+	SELECT EXISTS( SELECT 1 FROM %s WHERE %s.%s="%s")`,
+		dbTableCombo,
+		dbTableCombo,
+		pkName,
+		pkValue)
+
+	res, err := dbConn.RunExec(sqlQueryStr)
+	if err != nil {
+		return true, err
+	}
+
+	numRowsFound, err := res.RowsAffected()
+	if err == nil {
+		if numRowsFound > 0 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 //////////
