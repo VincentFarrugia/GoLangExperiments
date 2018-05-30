@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 ///////////////////////////////////////////
@@ -250,6 +251,11 @@ func ExtractDateStringFromMySQLDatetime(mySQLDateTimeStr string) string {
 // EG. FROM "2018-05-15T09:52:21Z" TO "2018-05-15"
 func ExtractDateStringFromISO8601(isoStr string) string {
 	return isoStr[0:10]
+}
+
+// GetTimeUTCNowAsISO8601 returns the current time in UTC in the ISO8601 date-time format.
+func GetTimeUTCNowAsISO8601() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
 ///////////////////////////////////////////
