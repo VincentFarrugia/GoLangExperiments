@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"strconv"
 )
@@ -10,8 +11,10 @@ import (
 type SQLTableEntry interface {
 	GetTableName() string
 	GetOwnerDatabaseName() string
+	GetPrimaryKeyName() string
 	GetColumnHeaders() []string
 	GetValues() []interface{}
+	GenerateNewItem() SQLTableEntry
 }
 
 // ClearObjectData clears data from the provided implementor of the SQLTableEntry interface.
@@ -27,6 +30,8 @@ func ClearObjectData(t SQLTableEntry) {
 			*v = 0.0
 		case *float64:
 			*v = 0.0
+		case *bool:
+			*v = false
 		default:
 		}
 	}
@@ -119,6 +124,8 @@ func ConvertValuesToStringArr(t SQLTableEntry) []string {
 			retStringArr = append(retStringArr, fmt.Sprintf("%f", *v))
 		case *float64:
 			retStringArr = append(retStringArr, fmt.Sprintf("%f", *v))
+		case *bool:
+			retStringArr = append(retStringArr, fmt.Sprintf("%t", *v))
 		default:
 			// Skip.
 		}
@@ -127,6 +134,48 @@ func ConvertValuesToStringArr(t SQLTableEntry) []string {
 }
 
 //////////
+
+// GetTableRowsByPK attempts to get table rows using the provided primary keys.
+func GetTableRowsByPK(dbConn *DBConnection, primaryKeyList []string, dummyItem SQLTableEntry, oItems *[]SQLTableEntry) (*[]SQLTableEntry, error) {
+
+	if dbConn == nil {
+		return oItems, fmt.Errorf("DBConn was nil")
+	}
+
+	if oItems == nil {
+		return nil, fmt.Errorf("oItems was nil")
+	}
+
+	dbTableCombo := dummyItem.GetOwnerDatabaseName() + "." + dummyItem.GetTableName()
+
+	sqlQueryStr := fmt.Sprintf(`
+	SELECT *
+	FROM %s 
+	`,
+		dbTableCombo)
+
+	var buffer bytes.Buffer
+	buffer.WriteString("WHERE ")
+	numIDs := len(primaryKeyList)
+	for idx, item := range primaryKeyList {
+		buffer.WriteString(fmt.Sprintf(`%s.%s="`, dummyItem.GetTableName(), dummyItem.GetPrimaryKeyName()))
+		buffer.WriteString(item)
+		buffer.WriteString(`"`)
+		if idx < (numIDs - 1) {
+			buffer.WriteString("||")
+		}
+	}
+	buffer.WriteString(";")
+	sqlQueryStr += buffer.String()
+
+	sqlRows, err := dbConn.RunQuery(sqlQueryStr)
+	if err != nil {
+		return oItems, err
+	}
+
+	retItems, err := ConvertSQLRowsToModelObjectSlice(sqlRows, dummyItem, oItems)
+	return retItems, err
+}
 
 // UpdateTableRow updates a row in the related table.
 func UpdateTableRow(dbConn *DBConnection, rowData SQLTableEntry) error {
@@ -165,6 +214,54 @@ func UpdateTableRowV2(dbConn *DBConnection, rowData SQLTableEntry, onDuplicateUp
 	return err
 }
 
+// BulkUpdateTableRows performs a batch update on multiple rows for a particular table.
+func BulkUpdateTableRows(dbConn *DBConnection, rowDataList []SQLTableEntry) error {
+
+	if dbConn == nil {
+		return fmt.Errorf("DBConn was nil")
+	}
+
+	if rowDataList == nil {
+		return fmt.Errorf("RowDataList was nil")
+	}
+
+	numRows := len(rowDataList)
+	if numRows <= 0 {
+		// RowData was empty.
+		return nil
+	}
+
+	var strBuffer bytes.Buffer
+	columnHeaderStr := CreateSQLColumnsString(rowDataList[0], false, false, true)
+	strBuffer.WriteString(fmt.Sprintf("INSERT INTO %s %s VALUES ", rowDataList[0].GetTableName(), columnHeaderStr))
+
+	for idx, item := range rowDataList {
+		strBuffer.WriteString(CreateSQLValuesString(item))
+
+		if idx < (numRows - 1) {
+			strBuffer.WriteString(",")
+		}
+		strBuffer.WriteString("\n")
+	}
+	strBuffer.WriteString(" ON DUPLICATE KEY UPDATE ")
+	columnHeaders := rowDataList[0].GetColumnHeaders()
+	numColumns := len(columnHeaders)
+	for idx, item := range columnHeaders {
+		strBuffer.WriteString(fmt.Sprintf("%s=VALUES(%s)", item, item))
+
+		if idx < (numColumns - 1) {
+			strBuffer.WriteString(",")
+		}
+		strBuffer.WriteString("\n")
+	}
+	strBuffer.WriteString(";")
+
+	sqlQueryStr := strBuffer.String()
+	fmt.Println("QueryString is:" + sqlQueryStr)
+	err := dbConn.RunMod(sqlQueryStr)
+	return err
+}
+
 // DoesRowExistWithStringPK returns true if the row with the provided PK exists in the specificed Database.Table.
 func DoesRowExistWithStringPK(dbConn *DBConnection, databaseName string, tableName string, pkName string, pkValue string) (bool, error) {
 
@@ -187,15 +284,102 @@ func DoesRowExistWithStringPK(dbConn *DBConnection, databaseName string, tableNa
 	}
 
 	numRowsFound, err := res.RowsAffected()
-	if err == nil {
-		if numRowsFound > 0 {
-			return true, nil
-		} else {
-			return false, nil
+	if err != nil {
+		return true, err
+	}
+
+	return (numRowsFound > 0), nil
+}
+
+// GetTableRowCount attempts to get the size of the table in terms of number of rows.
+func GetTableRowCount(dbConn *DBConnection, databaseName string, tableName string) (int, error) {
+
+	if dbConn == nil {
+		return 0, fmt.Errorf("DBConn was nil")
+	}
+
+	dbTableCombo := databaseName + "." + tableName
+
+	sqlQueryStr := fmt.Sprintf(`
+		SELECT COUNT(1) FROM %s`,
+		dbTableCombo)
+
+	res, err := dbConn.RunQuery(sqlQueryStr)
+	if err != nil {
+		return 0, err
+	}
+
+	retCount := 0
+	if res.Next() {
+		err = res.Scan(&retCount)
+		if err != nil {
+			return 0, err
 		}
 	}
 
-	return true, nil
+	return retCount, nil
+}
+
+// GetAllTableData fills up the provided slice with all the rows for a particular table.
+// Be very careful when using this as it will consume a lot of memory if the table is large.
+// TODO: Make an alternate version of this which uses PAGING.
+func GetAllTableData(dbConn *DBConnection, databaseName string, tableName string, dummyModelItem SQLTableEntry, oRetRows *[]SQLTableEntry) (*[]SQLTableEntry, error) {
+
+	if dbConn == nil {
+		return oRetRows, fmt.Errorf("DBConn was nil")
+	}
+
+	if oRetRows == nil {
+		return oRetRows, fmt.Errorf("oRetRows was nil")
+	}
+
+	dbTableCombo := databaseName + "." + tableName
+
+	sqlQueryStr := fmt.Sprintf(`
+		SELECT * FROM %s`,
+		dbTableCombo)
+
+	sqlRows, err := dbConn.RunQuery(sqlQueryStr)
+	if err != nil {
+		return oRetRows, err
+	}
+
+	rowRes, err := ConvertSQLRowsToModelObjectSlice(sqlRows, dummyModelItem, oRetRows)
+	return rowRes, err
+}
+
+// ConvertSQLRowsToModelObjectSlice attempts to create a model object for each row found in the sql rows result.
+func ConvertSQLRowsToModelObjectSlice(sqlRows *sql.Rows, dummyModelItem SQLTableEntry, oRetDataSlice *[]SQLTableEntry) (*[]SQLTableEntry, error) {
+
+	if oRetDataSlice == nil {
+		return oRetDataSlice, fmt.Errorf("oRetDataSlice was nil")
+	}
+
+	if sqlRows == nil {
+		// Row results was empty.
+		return nil, nil
+	}
+
+	tmpSlice := *oRetDataSlice
+
+	for sqlRows.Next() {
+
+		nxtModelItem := dummyModelItem.GenerateNewItem()
+		values := nxtModelItem.GetValues()
+		valueSlice := make([]interface{}, 0)
+		valueSlice = append(valueSlice, values...)
+
+		err := sqlRows.Scan(valueSlice...)
+		if shouldBreak(err) {
+			continue
+		} else {
+			tmpSlice = append(tmpSlice, nxtModelItem)
+		}
+	}
+
+	oRetDataSlice = &tmpSlice
+
+	return &tmpSlice, nil
 }
 
 //////////
