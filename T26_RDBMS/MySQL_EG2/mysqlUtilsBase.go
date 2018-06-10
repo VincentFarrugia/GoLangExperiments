@@ -163,6 +163,38 @@ func (dbcc *DBConnCreator) CreateConnection(settings DBConnSettings) (DBConnecti
 }
 
 ///////////////////////////////////////////
+// QueryResult
+///////////////////////////////////////////
+
+// IQueryResult should be implemented by all structs used to parse a series of sql.Rows returned by SQL queries.
+type IQueryResult interface {
+	GetValues() []interface{}
+	GenerateNewItem() IQueryResult
+}
+
+func convertRowsToQueryResultSlice(rows *sql.Rows, dummyItem IQueryResult) ([]IQueryResult, error) {
+	retSlice := []IQueryResult{}
+	if rows == nil {
+		return nil, fmt.Errorf("Rows was nil")
+	}
+
+	for rows.Next() {
+		nxtItem := dummyItem.GenerateNewItem()
+		valueSlice := make([]interface{}, 0)
+		valueSlice = append(valueSlice, nxtItem.GetValues())
+
+		err := rows.Scan(valueSlice...)
+		if shouldBreak(err) {
+			continue
+		} else {
+			retSlice = append(retSlice, nxtItem)
+		}
+	}
+
+	return retSlice, nil
+}
+
+///////////////////////////////////////////
 // HELPER FUNCTIONS:
 ///////////////////////////////////////////
 

@@ -262,6 +262,31 @@ func BulkUpdateTableRows(dbConn *DBConnection, rowDataList []SQLTableEntry) erro
 	return err
 }
 
+// DeleteRowsWithStringPKs deletes rows with the relevant PrimaryKeys.
+func DeleteRowsWithStringPKs(dbConn *DBConnection, databaseName string, tableName string, pkColumnName string, pkValues []string) error {
+	var buffer bytes.Buffer
+	dbTableComboStr := databaseName + "." + tableName
+	buffer.WriteString(fmt.Sprintf(`
+		DELETE FROM %s AS tbReq
+		WHERE `,
+		dbTableComboStr,
+	))
+	numPKs := len(pkValues)
+	for idx, item := range pkValues {
+		buffer.WriteString(fmt.Sprintf(`tbReq.%s = "%s"`, pkColumnName, item))
+		if idx < (numPKs - 1) {
+			buffer.WriteString(" OR ")
+		}
+	}
+	buffer.WriteString(";")
+	deletionSQLStr := buffer.String()
+	err := dbConn.RunMod(deletionSQLStr)
+	if shouldBreak(err) {
+		return err
+	}
+	return nil
+}
+
 // DoesRowExistWithStringPK returns true if the row with the provided PK exists in the specificed Database.Table.
 func DoesRowExistWithStringPK(dbConn *DBConnection, databaseName string, tableName string, pkName string, pkValue string) (bool, error) {
 
