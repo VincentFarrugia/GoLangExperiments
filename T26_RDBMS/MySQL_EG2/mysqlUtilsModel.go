@@ -1,4 +1,4 @@
-package main
+package mysqlutils
 
 import (
 	"bytes"
@@ -267,13 +267,13 @@ func DeleteRowsWithStringPKs(dbConn *DBConnection, databaseName string, tableNam
 	var buffer bytes.Buffer
 	dbTableComboStr := databaseName + "." + tableName
 	buffer.WriteString(fmt.Sprintf(`
-		DELETE FROM %s AS tbReq
+		DELETE FROM %s
 		WHERE `,
 		dbTableComboStr,
 	))
 	numPKs := len(pkValues)
 	for idx, item := range pkValues {
-		buffer.WriteString(fmt.Sprintf(`tbReq.%s = "%s"`, pkColumnName, item))
+		buffer.WriteString(fmt.Sprintf(`%s.%s = "%s"`, dbTableComboStr, pkColumnName, item))
 		if idx < (numPKs - 1) {
 			buffer.WriteString(" OR ")
 		}
@@ -281,10 +281,7 @@ func DeleteRowsWithStringPKs(dbConn *DBConnection, databaseName string, tableNam
 	buffer.WriteString(";")
 	deletionSQLStr := buffer.String()
 	err := dbConn.RunMod(deletionSQLStr)
-	if shouldBreak(err) {
-		return err
-	}
-	return nil
+	return err
 }
 
 // DoesRowExistWithStringPK returns true if the row with the provided PK exists in the specificed Database.Table.
@@ -395,7 +392,7 @@ func ConvertSQLRowsToModelObjectSlice(sqlRows *sql.Rows, dummyModelItem SQLTable
 		valueSlice = append(valueSlice, values...)
 
 		err := sqlRows.Scan(valueSlice...)
-		if shouldBreak(err) {
+		if err != nil {
 			continue
 		} else {
 			tmpSlice = append(tmpSlice, nxtModelItem)

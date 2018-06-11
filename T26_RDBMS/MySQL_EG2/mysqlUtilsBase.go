@@ -2,7 +2,7 @@
 // MySQL DATABASE UTILS BASE:
 ////////////////////////////////////////////////////
 
-package main
+package mysqlutils
 
 import (
 	"database/sql"
@@ -172,7 +172,8 @@ type IQueryResult interface {
 	GenerateNewItem() IQueryResult
 }
 
-func convertRowsToQueryResultSlice(rows *sql.Rows, dummyItem IQueryResult) ([]IQueryResult, error) {
+// ConvertRowsToQueryResultSlice transforms raw sql.Rows into a slice of IQueryResult.
+func ConvertRowsToQueryResultSlice(rows *sql.Rows, dummyItem IQueryResult) ([]IQueryResult, error) {
 	retSlice := []IQueryResult{}
 	if rows == nil {
 		return nil, fmt.Errorf("Rows was nil")
@@ -181,10 +182,10 @@ func convertRowsToQueryResultSlice(rows *sql.Rows, dummyItem IQueryResult) ([]IQ
 	for rows.Next() {
 		nxtItem := dummyItem.GenerateNewItem()
 		valueSlice := make([]interface{}, 0)
-		valueSlice = append(valueSlice, nxtItem.GetValues())
+		valueSlice = append(valueSlice, nxtItem.GetValues()...)
 
 		err := rows.Scan(valueSlice...)
-		if shouldBreak(err) {
+		if err != nil {
 			continue
 		} else {
 			retSlice = append(retSlice, nxtItem)
@@ -198,7 +199,8 @@ func convertRowsToQueryResultSlice(rows *sql.Rows, dummyItem IQueryResult) ([]IQ
 // HELPER FUNCTIONS:
 ///////////////////////////////////////////
 
-func convertRowsToString(rows *sql.Rows) (string, error) {
+// ConvertRowsToString writes data from raw sql.Rows into a string and returns it.
+func ConvertRowsToString(rows *sql.Rows) (string, error) {
 	retStr := ""
 	var retError error
 	if rows == nil {
